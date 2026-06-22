@@ -1,0 +1,48 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: order-service
+
+  datasource:
+    # Same shared H2 file as auth-service and vendor-service.
+    # Start auth-service first — it owns ddl-auto: create for vendors/kitchens tables.
+    # NON_KEYWORDS prevents H2 from treating USER and VALUE as reserved words.
+    url: jdbc:h2:file:~/thalicloud-data/thalidb;AUTO_SERVER=TRUE;NON_KEYWORDS=USER,VALUE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+
+# Must match auth-service and vendor-service exactly so tokens are accepted here.
+jwt:
+  secret: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+  access-token-expiry-ms: 900000
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+
+logging:
+  level:
+    com.thalicloud: DEBUG
+    org.springframework.security: INFO
