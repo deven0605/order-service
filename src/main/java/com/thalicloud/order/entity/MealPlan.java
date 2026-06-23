@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "vendor_meal_plans", indexes = {
+@Table(name = "meal_plans", indexes = {
         @Index(name = "idx_meal_plan_vendor_id", columnList = "vendor_id")
 })
 @Getter

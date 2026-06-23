@@ -54,6 +54,12 @@ public class DataSeeder implements ApplicationRunner {
             return;
         }
 
+        // Remove orphaned seed orders left by a previous vendor registration (same display IDs, old vendor_id)
+        jdbcTemplate.update(
+                "DELETE FROM vendor_orders WHERE order_display_id IN " +
+                "('ORD-001','ORD-002','ORD-003','ORD-004','ORD-005'," +
+                " 'ORD-006','ORD-007','ORD-008','ORD-009','ORD-010')");
+
         log.info("[DataSeeder] Seeding test data for vendor: {} ({})", vendor.getEmail(), vendorId);
         seedOrders(vendorId);
         seedMealPlan(vendorId);
