@@ -67,7 +67,7 @@ public class OrderController {
 
     /**
      * PATCH /api/orders/{orderId}/status
-     * Advances the order through its lifecycle: Pending → Preparing → Ready → Delivered.
+     * Advances the order through its lifecycle: Pending → Preparing → Ready → Dispatched → Delivered.
      */
     @PatchMapping("/{orderId}/status")
     public ResponseEntity<ApiResponse<UpdateOrderStatusResponse>> updateStatus(

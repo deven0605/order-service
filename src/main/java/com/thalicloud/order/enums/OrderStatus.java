@@ -8,6 +8,7 @@ public enum OrderStatus {
     PENDING("Pending"),
     PREPARING("Preparing"),
     READY("Ready"),
+    DISPATCHED("DISPATCHED"),
     DELIVERED("Delivered");
 
     private final String displayName;
@@ -33,13 +34,14 @@ public enum OrderStatus {
 
     /**
      * Returns the single valid next status, or null if already terminal.
-     * Enforces the one-direction lifecycle: Pending → Preparing → Ready → Delivered.
+     * Enforces the one-direction lifecycle: Pending → Preparing → Ready → Dispatched → Delivered.
      */
     public OrderStatus next() {
         return switch (this) {
             case PENDING   -> PREPARING;
             case PREPARING -> READY;
-            case READY     -> DELIVERED;
+            case READY     -> DISPATCHED;
+            case DISPATCHED -> DELIVERED;
             case DELIVERED -> null;
         };
     }

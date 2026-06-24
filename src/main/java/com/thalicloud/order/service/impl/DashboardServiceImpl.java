@@ -1,7 +1,6 @@
 package com.thalicloud.order.service.impl;
 
 import com.thalicloud.order.dto.response.DashboardSummaryResponse;
-import com.thalicloud.order.entity.MealPlan;
 import com.thalicloud.order.repository.MealPlanRepository;
 import com.thalicloud.order.repository.OrderRepository;
 import com.thalicloud.order.repository.RatingRepository;
