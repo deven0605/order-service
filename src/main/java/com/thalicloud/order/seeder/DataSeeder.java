@@ -1,5 +1,6 @@
 package com.thalicloud.order.seeder;
 
+import com.thalicloud.order.entity.Vendor;
 import com.thalicloud.order.repository.VendorRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -12,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -63,8 +65,35 @@ public class DataSeeder implements ApplicationRunner {
         log.info("[DataSeeder] Seeding test data for vendor: {} ({})", vendor.getEmail(), vendorId);
         seedOrders(vendorId);
         seedMealPlan(vendorId);
-        seedRatings(vendorId);
+        seedRatings(vendorId, RATING_PATTERNS[0]);
         log.info("[DataSeeder] Done — 10 orders, 1 meal plan, 5 ratings inserted.");
+
+        seedRatingsForUnratedVendors(vendors);
+    }
+
+    // ── Kitchen-discovery ratings (SRS M3) ───────────────────────────────────────
+    // vendor-service's /api/kitchens listing calls GET /api/orders/ratings/aggregate
+    // to enrich each kitchen card. Any vendor without ratings yet (e.g. the demo
+    // kitchens seeded by auth-service's DataSeeder) gets a small varied rating set
+    // here so the Home screen doesn't show every kitchen as unrated.
+    private static final double[][] RATING_PATTERNS = {
+            {4.5, 4.8, 4.7, 5.0, 4.6},
+            {4.2, 4.0, 4.5, 4.1, 3.9},
+            {3.8, 4.0, 3.5, 4.2},
+            {4.9, 5.0, 4.8, 4.9, 5.0, 4.7},
+            {4.3, 4.6, 4.4},
+    };
+
+    private void seedRatingsForUnratedVendors(List<Vendor> vendors) {
+        for (int i = 0; i < vendors.size(); i++) {
+            UUID vendorId = vendors.get(i).getId();
+            Long count = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM vendor_ratings WHERE vendor_id = ?", Long.class, vendorId);
+            if (count != null && count > 0) continue;
+
+            double[] pattern = RATING_PATTERNS[i % RATING_PATTERNS.length];
+            seedRatings(vendorId, pattern);
+        }
     }
 
     // ── Orders ────────────────────────────────────────────────────────────────
@@ -134,9 +163,7 @@ public class DataSeeder implements ApplicationRunner {
 
     // ── Ratings ───────────────────────────────────────────────────────────────
 
-    private void seedRatings(UUID vendorId) {
-        // 5 ratings → avg = (4.5+4.8+4.7+5.0+4.6)/5 = 23.6/5 = 4.72 → rounded to 4.7
-        double[] values = {4.5, 4.8, 4.7, 5.0, 4.6};
+    private void seedRatings(UUID vendorId, double[] values) {
         LocalDateTime now = LocalDateTime.now();
 
         String sql = """

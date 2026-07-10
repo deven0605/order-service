@@ -23,7 +23,8 @@ public class SecurityConfig {
 
     private static final String[] PUBLIC_ENDPOINTS = {
             "/actuator/health",
-            "/h2-console/**"
+            "/h2-console/**",
+            "/api/orders/ratings/aggregate"
     };
 
     @Bean
