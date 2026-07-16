@@ -29,6 +29,12 @@ public class GlobalExceptionHandler {
                 .body(ApiError.of("INVALID_STATUS_TRANSITION", ex.getMessage()));
     }
 
+    @ExceptionHandler(InvalidOrderRequestException.class)
+    public ResponseEntity<ApiError> handleInvalidOrderRequest(InvalidOrderRequestException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiError.of(ex.getCode(), ex.getMessage()));
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiError> handleValidation(MethodArgumentNotValidException ex) {
         String message = ex.getBindingResult().getFieldErrors().stream()

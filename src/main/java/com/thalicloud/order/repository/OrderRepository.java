@@ -18,6 +18,8 @@ public interface OrderRepository extends JpaRepository<Order, UUID>, JpaSpecific
 
     Optional<Order> findByOrderDisplayIdAndVendorIdAndDeletedAtIsNull(String orderDisplayId, UUID vendorId);
 
+    boolean existsByOrderDisplayId(String orderDisplayId);
+
     @Query("""
             SELECT o FROM VendorOrder o
             WHERE o.vendorId = :vendorId
