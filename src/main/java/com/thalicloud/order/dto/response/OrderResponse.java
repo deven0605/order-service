@@ -6,5 +6,6 @@ public record OrderResponse(
         String mealType,
         long amountInPaise,
         String status,
-        String createdAt
+        String createdAt,
+        String rejectionReason
 ) {}

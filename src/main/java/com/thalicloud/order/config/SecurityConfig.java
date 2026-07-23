@@ -24,7 +24,11 @@ public class SecurityConfig {
     private static final String[] PUBLIC_ENDPOINTS = {
             "/actuator/health",
             "/h2-console/**",
-            "/api/orders/ratings/aggregate"
+            "/api/orders/ratings/aggregate",
+            // Service-to-service only — guarded by the X-Internal-Key header check
+            // inside InternalOrderController itself, same pattern as delivery-service's
+            // InternalAssignmentController.
+            "/api/orders/internal/**"
     };
 
     @Bean

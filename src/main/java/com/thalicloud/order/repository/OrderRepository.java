@@ -18,6 +18,12 @@ public interface OrderRepository extends JpaRepository<Order, UUID>, JpaSpecific
 
     Optional<Order> findByOrderDisplayIdAndVendorIdAndDeletedAtIsNull(String orderDisplayId, UUID vendorId);
 
+    Optional<Order> findByOrderDisplayIdAndCustomerIdAndDeletedAtIsNull(String orderDisplayId, UUID customerId);
+
+    // Unscoped lookup — needed by the internal status-callback endpoint, which
+    // delivery-service calls knowing only the orderId (no vendorId in hand).
+    Optional<Order> findByOrderDisplayIdAndDeletedAtIsNull(String orderDisplayId);
+
     boolean existsByOrderDisplayId(String orderDisplayId);
 
     @Query("""

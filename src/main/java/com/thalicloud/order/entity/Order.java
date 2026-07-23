@@ -103,6 +103,10 @@ public class Order {
     @Column(name = "status", nullable = false, length = 20)
     private OrderStatus status;
 
+    // Set only when status == REJECTED (see reject()).
+    @Column(name = "rejection_reason", length = 255)
+    private String rejectionReason;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -174,6 +178,12 @@ public class Order {
     public void advanceStatus(OrderStatus newStatus) {
         this.status    = newStatus;
         this.updatedAt = LocalDateTime.now();
+    }
+
+    public void reject(String reason) {
+        this.status          = OrderStatus.REJECTED;
+        this.rejectionReason = reason;
+        this.updatedAt       = LocalDateTime.now();
     }
 
     public void softDelete() {

@@ -6,10 +6,12 @@ import com.fasterxml.jackson.annotation.JsonValue;
 public enum OrderStatus {
 
     PENDING("Pending"),
+    KITCHEN_ACCEPTED("Kitchen Accepted"),
     PREPARING("Preparing"),
     READY("Ready"),
     DISPATCHED("DISPATCHED"),
-    DELIVERED("Delivered");
+    DELIVERED("Delivered"),
+    REJECTED("Rejected");
 
     private final String displayName;
 
@@ -33,20 +35,29 @@ public enum OrderStatus {
     }
 
     /**
-     * Returns the single valid next status, or null if already terminal.
-     * Enforces the one-direction lifecycle: Pending → Preparing → Ready → Dispatched → Delivered.
+     * Returns the single valid "forward" next status, or null if already terminal.
+     * Enforces the one-direction lifecycle: Pending → Kitchen Accepted → Preparing →
+     * Ready → Dispatched → Delivered. Rejected is a separate terminal branch off
+     * Pending only (see canTransitionTo) — a vendor rejection isn't a "next" step.
      */
     public OrderStatus next() {
         return switch (this) {
-            case PENDING   -> PREPARING;
-            case PREPARING -> READY;
-            case READY     -> DISPATCHED;
-            case DISPATCHED -> DELIVERED;
-            case DELIVERED -> null;
+            case PENDING          -> KITCHEN_ACCEPTED;
+            case KITCHEN_ACCEPTED -> PREPARING;
+            case PREPARING        -> READY;
+            case READY            -> DISPATCHED;
+            case DISPATCHED       -> DELIVERED;
+            case DELIVERED, REJECTED -> null;
         };
     }
 
     public boolean canTransitionTo(OrderStatus target) {
-        return target != null && target == this.next();
+        if (target == null) {
+            return false;
+        }
+        if (this == PENDING && target == REJECTED) {
+            return true;
+        }
+        return target == this.next();
     }
 }

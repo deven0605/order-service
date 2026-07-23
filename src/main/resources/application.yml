@@ -33,6 +33,18 @@ jwt:
   secret: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
   access-token-expiry-ms: 900000
 
+services:
+  delivery-service:
+    base-url: http://localhost:8086
+
+# Shared dev secret for the internal.dispatch-key seams this service both calls
+# (DeliveryDispatchClient -> delivery-service) and exposes (InternalOrderController,
+# called back by delivery-service) — same literal value delivery-service already
+# uses for its own internal.dispatch-key, so the header check matches both ways.
+# Phase 1 placeholder, same spirit as the hardcoded OTP.
+internal:
+  dispatch-key: dev-only-internal-dispatch-key
+
 management:
   endpoints:
     web:

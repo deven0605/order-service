@@ -1,11 +1,13 @@
 package com.thalicloud.order.service.impl;
 
+import com.thalicloud.order.client.DeliveryDispatchClient;
 import com.thalicloud.order.dto.request.OrderFilterRequest;
 import com.thalicloud.order.dto.request.PlaceOrderAddOnRequest;
 import com.thalicloud.order.dto.request.PlaceOrderItemRequest;
 import com.thalicloud.order.dto.request.PlaceOrderRequest;
 import com.thalicloud.order.dto.request.UpdateOrderStatusRequest;
 import com.thalicloud.order.dto.response.OrderResponse;
+import com.thalicloud.order.dto.response.OrderStatusResponse;
 import com.thalicloud.order.dto.response.PagedOrdersResponse;
 import com.thalicloud.order.dto.response.PlaceOrderResponse;
 import com.thalicloud.order.dto.response.UpdateOrderStatusResponse;
@@ -68,6 +70,7 @@ public class OrderServiceImpl implements OrderService {
     private final KitchenRepository  kitchenRepository;
     private final MealTypeRepository mealTypeRepository;
     private final AddOnRepository    addOnRepository;
+    private final DeliveryDispatchClient deliveryDispatchClient;
 
     @Override
     public List<OrderResponse> getRecentOrders(UUID vendorId, int limit) {
@@ -139,6 +142,91 @@ public class OrderServiceImpl implements OrderService {
         return new UpdateOrderStatusResponse(
                 order.getOrderDisplayId(),
                 newStatus.getDisplayName(),
+                order.getUpdatedAt().atOffset(ZoneOffset.UTC).format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+        );
+    }
+
+    @Override
+    @Transactional
+    public UpdateOrderStatusResponse acceptOrder(UUID vendorId, String orderId) {
+        Order order = orderRepository
+                .findByOrderDisplayIdAndVendorIdAndDeletedAtIsNull(orderId, vendorId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "ORDER_NOT_FOUND", "Order not found: " + orderId));
+
+        if (!order.getStatus().canTransitionTo(OrderStatus.KITCHEN_ACCEPTED)) {
+            throw new InvalidStatusTransitionException(
+                    "Cannot accept order " + orderId + " from " + order.getStatus().getDisplayName());
+        }
+
+        order.advanceStatus(OrderStatus.KITCHEN_ACCEPTED);
+        orderRepository.save(order);
+
+        Kitchen kitchen = order.getKitchenId() != null ? kitchenRepository.findById(order.getKitchenId()).orElse(null) : null;
+        Customer customer = order.getCustomerId() != null ? customerRepository.findById(order.getCustomerId()).orElse(null) : null;
+        deliveryDispatchClient.dispatchOrder(order, kitchen, customer);
+
+        return new UpdateOrderStatusResponse(
+                order.getOrderDisplayId(),
+                order.getStatus().getDisplayName(),
+                order.getUpdatedAt().atOffset(ZoneOffset.UTC).format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+        );
+    }
+
+    @Override
+    @Transactional
+    public UpdateOrderStatusResponse rejectOrder(UUID vendorId, String orderId, String reason) {
+        Order order = orderRepository
+                .findByOrderDisplayIdAndVendorIdAndDeletedAtIsNull(orderId, vendorId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "ORDER_NOT_FOUND", "Order not found: " + orderId));
+
+        if (!order.getStatus().canTransitionTo(OrderStatus.REJECTED)) {
+            throw new InvalidStatusTransitionException(
+                    "Cannot reject order " + orderId + " from " + order.getStatus().getDisplayName());
+        }
+
+        order.reject(reason);
+        orderRepository.save(order);
+
+        return new UpdateOrderStatusResponse(
+                order.getOrderDisplayId(),
+                order.getStatus().getDisplayName(),
+                order.getUpdatedAt().atOffset(ZoneOffset.UTC).format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+        );
+    }
+
+    @Override
+    @Transactional
+    public void updateStatusInternal(String orderId, OrderStatus newStatus) {
+        Order order = orderRepository
+                .findByOrderDisplayIdAndDeletedAtIsNull(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "ORDER_NOT_FOUND", "Order not found: " + orderId));
+
+        if (!order.getStatus().canTransitionTo(newStatus)) {
+            throw new InvalidStatusTransitionException(
+                    "Cannot transition order " + orderId + " from " + order.getStatus().getDisplayName()
+                    + " to " + newStatus.getDisplayName());
+        }
+
+        order.advanceStatus(newStatus);
+        orderRepository.save(order);
+    }
+
+    @Override
+    public OrderStatusResponse getStatusForCustomer(UUID customerId, String orderId) {
+        Order order = orderRepository
+                .findByOrderDisplayIdAndCustomerIdAndDeletedAtIsNull(orderId, customerId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "ORDER_NOT_FOUND", "Order not found: " + orderId));
+
+        return new OrderStatusResponse(
+                order.getOrderDisplayId(),
+                // Raw enum name (not getDisplayName()) — matches PlaceOrderResponse's
+                // contract, which the mobile app's OrderStatusCode type already mirrors.
+                order.getStatus().name(),
+                order.getRejectionReason(),
                 order.getUpdatedAt().atOffset(ZoneOffset.UTC).format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
         );
     }
@@ -240,7 +328,8 @@ public class OrderServiceImpl implements OrderService {
                 o.getMealType(),
                 o.getAmountInPaise(),
                 o.getStatus().getDisplayName(),
-                o.getCreatedAt().atOffset(ZoneOffset.UTC).format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+                o.getCreatedAt().atOffset(ZoneOffset.UTC).format(DateTimeFormatter.ISO_OFFSET_DATE_TIME),
+                o.getRejectionReason()
         );
     }
 

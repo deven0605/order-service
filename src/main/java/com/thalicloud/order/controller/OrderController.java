@@ -2,9 +2,11 @@ package com.thalicloud.order.controller;
 
 import com.thalicloud.order.dto.request.OrderFilterRequest;
 import com.thalicloud.order.dto.request.PlaceOrderRequest;
+import com.thalicloud.order.dto.request.RejectOrderRequest;
 import com.thalicloud.order.dto.request.UpdateOrderStatusRequest;
 import com.thalicloud.order.dto.response.ApiResponse;
 import com.thalicloud.order.dto.response.OrderResponse;
+import com.thalicloud.order.dto.response.OrderStatusResponse;
 import com.thalicloud.order.dto.response.PagedOrdersResponse;
 import com.thalicloud.order.dto.response.PlaceOrderResponse;
 import com.thalicloud.order.dto.response.UpdateOrderStatusResponse;
@@ -98,5 +100,47 @@ public class OrderController {
 
         PlaceOrderResponse body = orderService.placeOrder(customer.getId(), request);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.of(body));
+    }
+
+    /**
+     * POST /api/orders/{orderId}/accept — vendor accepts a PENDING order.
+     * Advances status to Kitchen Accepted and (best-effort) notifies
+     * delivery-service to dispatch an available partner.
+     */
+    @PreAuthorize("hasRole('VENDOR')")
+    @PostMapping("/{orderId}/accept")
+    public ResponseEntity<ApiResponse<UpdateOrderStatusResponse>> acceptOrder(
+            @AuthenticationPrincipal Vendor vendor,
+            @PathVariable String orderId) {
+
+        UpdateOrderStatusResponse body = orderService.acceptOrder(vendor.getId(), orderId);
+        return ResponseEntity.ok(ApiResponse.of(body));
+    }
+
+    /**
+     * POST /api/orders/{orderId}/reject — vendor rejects a PENDING order with a reason.
+     */
+    @PreAuthorize("hasRole('VENDOR')")
+    @PostMapping("/{orderId}/reject")
+    public ResponseEntity<ApiResponse<UpdateOrderStatusResponse>> rejectOrder(
+            @AuthenticationPrincipal Vendor vendor,
+            @PathVariable String orderId,
+            @Valid @RequestBody RejectOrderRequest request) {
+
+        UpdateOrderStatusResponse body = orderService.rejectOrder(vendor.getId(), orderId, request.reason());
+        return ResponseEntity.ok(ApiResponse.of(body));
+    }
+
+    /**
+     * GET /api/orders/{orderId}/status — customer polls this for the order-tracking screen.
+     */
+    @PreAuthorize("hasRole('CUSTOMER')")
+    @GetMapping("/{orderId}/status")
+    public ResponseEntity<ApiResponse<OrderStatusResponse>> getOrderStatus(
+            @AuthenticationPrincipal Customer customer,
+            @PathVariable String orderId) {
+
+        OrderStatusResponse body = orderService.getStatusForCustomer(customer.getId(), orderId);
+        return ResponseEntity.ok(ApiResponse.of(body));
     }
 }
